@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Saved Books</title>
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      height: 100vh;
+      background-position: center;
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+      text-align: center;
+      background-image: url('https://www.cem.org/hubfs/blog/Blog-10-essential-reads-to-improve-reading-comprehension.jpg');
+      overflow-x: hidden;
+    }
+
+    .header {
+      justify-content: center;
+    }
+
+    .book-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+    }
+    
+    .book-details-container {
+      flex: 2;
+      padding: 20px;
+      box-sizing: border-box;
+      background-color: #fff;
+      border-radius: 10px;
+      position: fixed;
+      top: 50px;
+      left: 775px;
+      margin-bottom: 50px;
+      margin-right: 50px;
+      font-family: 'Poppins', sans-serif;
+      font-weight: 300;
+      font-size: 12pt;
+      overflow-y: auto;
+      max-height: calc(100vh - 100px);
+    }
+
+    .book-details-container:empty {
+      display: none;
+    }
+    
+    .book-details-container h3 {
+      font-size: 50px;
+    }
+
+    .book {
+      width: 250px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      position: relative;
+      cursor: pointer;
+      background-color: #fff;
+    }
+
+    .book img {
+      width: 100%;
+      height: auto;
+      border-top-left-radius: 10px;
+      border-top-right-radius: 10px;
+    }
+
+    .book-title {
+      padding: 10px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="book-container" id="bookContainer"></div>
+  </div>
+
+  <div class="book-details-container" id="bookDetails"></div>
+
+  <script>
+    // Function to fetch saved books from JSONbin
+    async function fetchSavedBooks() {
+      try {
+        const response = await fetch('https://api.jsonbin.io/v3/b/661d6245ad19ca34f85a830d/latest', {
+          headers: {
+            'X-Master-Key': '$2a$10$/17M3i08zclMdxk.IXTPkuyd2HAZjDdOsi4eH8dyHPwbqjpKpF2Du'
+          },
+        });
+        if (!response.ok) {
+          throw new Error('Failed to fetch saved books');
+        }
+        const data = await response.json();
+        return data.record || [];
+      } catch (error) {
+        console.error('Error fetching saved books:', error);
+        return [];
+      }
+    }
+
+    // Function to display saved books
+    async function displaySavedBooks() {
+      const savedBooks = await fetchSavedBooks();
+      const bookContainer = document.getElementById('bookContainer');
+      if (!bookContainer) {
+        console.error('bookContainer element not found');
+        return;
+      }
+      bookContainer.innerHTML = '';
+
+      for (const book of savedBooks) {
+        const bookDiv = document.createElement('div');
+        bookDiv.classList.add('book');
+
+        const bookTitle = document.createElement('p');
+        bookTitle.classList.add('book-title');
+        bookTitle.textContent = book.bookTitle;
+
+        const bookImage = document.createElement('img');
+        bookImage.src = book.bookImage ? book.bookImage : 'https://via.placeholder.com/150';
+        bookImage.alt = book.bookTitle;
+
+        bookImage.addEventListener('click', function() {
+          displayBookDetails(book);
+        });
+        bookDiv.appendChild(bookTitle);
+        bookDiv.appendChild(bookImage);
+
+        bookContainer.appendChild(bookDiv);
+      }
+    }
+
+    // Function to display book details
+    function displayBookDetails(bookInfo) {
+      const bookDetailsContainer = document.getElementById('bookDetails');
+      const { bookTitle, bookAuthor, bookGenre, bookDescription, bookImage } = bookInfo;
+      const bookDetailsDiv = document.createElement('div');
+      bookDetailsDiv.classList.add('book-details');
+      const bookHTML = `
+        <h3>${bookTitle}</h3>
+        <img src="${bookImage ? bookImage : 'https://via.placeholder.com/150'}" alt="${bookTitle}">
+        <p>Author(s): ${bookAuthor ? bookAuthor : 'Not available'}</p>
+        <p>Genre(s): ${bookGenre ? bookGenre : 'Not available'}</p>
+        <p>Description: ${bookDescription ? bookDescription : 'Not available'}</p>
+        <button class="delete-button" onclick="deleteBook('${bookInfo.bookId}')">Delete</button>
+      `;
+
+      bookDetailsDiv.innerHTML = bookHTML;
+
+      bookDetailsContainer.innerHTML = ''; // Clear previous content
+      bookDetailsContainer.appendChild(bookDetailsDiv);
+    }
+
+    // Function to delete book from library
+    async function deleteBook(bookId) {
+      try {
+        console.log('Attempting to delete book from library...');
+        const savedBooks = await fetchSavedBooks();
+        const updatedBooks = savedBooks.filter(book => book.bookId !== bookId);
+        const response = await fetch('https://api.jsonbin.io/v3/b/661d6245ad19ca34f85a830d', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Master-Key': '$2a$10$/17M3i08zclMdxk.IXTPkuyd2HAZjDdOsi4eH8dyHPwbqjpKpF2Du'
+          },
+          body: JSON.stringify(updatedBooks),
+        });
+        if (!response.ok) {
+          throw new Error('Failed to delete book');
+        }
+        console.log('Book deleted successfully.');
+        alert('Book deleted from library successfully!');
+        await displaySavedBooks(); // Refresh the saved books display
+      } catch (error) {
+        console.error('Error deleting book:', error);
+        alert('Failed to delete book from library. Please try again later.');
+      }
+    }
+
+    // Initial display of saved books
+    displaySavedBooks();
+  </script>
+</body>
+</html>
